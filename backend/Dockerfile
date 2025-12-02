@@ -1,30 +1,26 @@
-FROM node:18
-
-# Install system dependencies (Python + FFmpeg)
+# Install Python + ffmpeg
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv ffmpeg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy Node dependencies and install
+# Copy Node and ML files early
 COPY package*.json ./
+COPY ml ./ml
+
 RUN npm install
 
-# Copy backend code
 COPY . .
 
-# ---- Python ML Dependencies Fix ----
-# Create virtual environment for Python packages
-RUN python3 -m venv /app/venv
-ENV PATH="/app/venv/bin:$PATH"
-RUN pip3 install --upgrade pip
-RUN pip3 install --no-cache-dir -r ml/requirements.txt
-# -----------------------------------
+# Create virtual env
+ENV VIRTUAL_ENV=/app/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Expose backend port
+# Install Python ML dependencies — allows breaking system packages
+RUN pip3 install --break-system-packages --no-cache-dir -r ml/requirements.txt
+
 EXPOSE 10000
-
-CMD ["npm", "start"]
+CMD ["npm","start"]
