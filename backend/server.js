@@ -12,12 +12,19 @@ const connectDB = require('./src/config/db');
 const app = express();
 const server = http.createServer(app);
 
+// const io = new Server(server, {
+//   cors: {
+//     origin: process.env.CLIENT_URL,
+//     credentials: true
+//   }
+// });
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL.split(','),
     credentials: true
   }
 });
+
 
 app.set('io', io);
 
