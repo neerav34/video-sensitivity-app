@@ -24,6 +24,18 @@ export default function DashboardPage() {
     fetchVideos();
   }, [status, sensitivity]);
 
+  // Real-time update listener
+  useEffect(() => {
+  const s = io((import.meta.env.VITE_API_URL || '').replace('/api', '').trim());
+
+  s.on('processingUpdate', () => {
+    fetchVideos(); // refresh list on every backend update
+  });
+
+  return () => s.disconnect();
+}, []);
+
+  
   return (
     <div>
       <h2>Video Library</h2>
