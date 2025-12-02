@@ -5,7 +5,7 @@ export default function VideoPlayerPage() {
   const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
   // const streamUrl = `${apiBase}/videos/${id}/stream`;
   const token = localStorage.getItem('token');
-  const streamUrl = `${apiBase}/videos/${id}/stream?token=${token}`;
+  const streamUrl = `${apiBase}/api/videos/${id}/stream?token=${token}`;
 
 
   return (
