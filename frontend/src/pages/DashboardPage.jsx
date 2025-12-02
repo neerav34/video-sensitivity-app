@@ -25,15 +25,15 @@ export default function DashboardPage() {
   }, [status, sensitivity]);
 
   // Real-time update listener
-  useEffect(() => {
-  const s = io((import.meta.env.VITE_API_URL || '').replace('/api', '').trim());
+//   useEffect(() => {
+//   const s = io((import.meta.env.VITE_API_URL || '').replace('/api', '').trim());
 
-  s.on('processingUpdate', () => {
-    fetchVideos(); // refresh list on every backend update
-  });
+//   s.on('processingUpdate', () => {
+//     fetchVideos(); // refresh list on every backend update
+//   });
 
-  return () => s.disconnect();
-}, []);
+//   return () => s.disconnect();
+// }, []);
 
   
   return (
