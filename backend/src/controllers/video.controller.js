@@ -27,12 +27,20 @@ exports.uploadVideo = async (req, res) => {
     });
 
     // async processing
-    process.nextTick(() => {
-      const io = req.app.get('io');
-      if (io) {
-        require('../services/videoProcessing').processVideoPipeline(video._id, io);
-      }
-    });
+    // process.nextTick(() => {
+    //   const io = req.app.get('io');
+    //   if (io) {
+    //     require('../services/videoProcessing').processVideoPipeline(video._id, io);
+    //   }
+    // });
+
+    const io = req.app.get('io');
+    if (io) {
+    setTimeout(() => {
+    require('../services/videoProcessing').processVideoPipeline(video._id, io);
+    }, 1000); // give frontend 1s to join room
+    }
+
 
     res.status(201).json({ message: 'Video uploaded', videoId: video._id });
   } catch (err) {
