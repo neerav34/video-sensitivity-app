@@ -1,15 +1,23 @@
 FROM node:18
 
-RUN apt-get update && apt-get install -y ffmpeg python3 python3-pip
+# Install system dependencies (FFmpeg + Python)
+RUN apt-get update && apt-get install -y \
+  python3 python3-pip ffmpeg && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/*
 
+# Set working directory
 WORKDIR /app
 
-COPY backend/package*.json ./
+# Copy Node deps first (cache optimization)
+COPY package*.json ./
 RUN npm install
 
-COPY backend ./
-RUN pip3 install -r ml/requirements.txt
+# Copy full backend
+COPY . .
+
+# Install Python ML dependencies
+RUN pip3 install --no-cache-dir -r ml/requirements.txt
 
 EXPOSE 10000
 CMD ["npm", "start"]
-
