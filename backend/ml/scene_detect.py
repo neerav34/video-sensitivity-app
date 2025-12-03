@@ -50,28 +50,38 @@
 
 
 
+import os
 import cv2
 import sys
 import json
-import os
 import warnings
 
-# Disable all YOLO + Ultralytics logs
-os.environ["ULTRALYTICS_LOGGING"] = "False"
-os.environ["ULTRALYTICS_QUIET"] = "True"
-os.environ["YOLO_VERBOSE"] = "0"
-os.environ["WANDB_SILENT"] = "true"
+# ---------------------------------------------------------
+# SILENCE ALL YOLO / ULTRALYTICS / NUMPY NOISE
+# ---------------------------------------------------------
 warnings.filterwarnings("ignore")
 
+os.environ["YOLO_VERBOSE"] = "False"
+os.environ["ULTRALYTICS_SUPPRESS"] = "True"
+os.environ["ULTRALYTICS_CFG"] = "False"
+os.environ["KMP_WARNINGS"] = "0"
+os.environ["NUMEXPR_MAX_THREADS"] = "8"
+
+# ---------------------------------------------------------
+# Import YOLO silently
+# ---------------------------------------------------------
 from ultralytics import YOLO
 
 video_path = sys.argv[1]
 
-# Load model safely (NO verbose, NO streaming)
-model = YOLO("yolov8n.pt")
+# Load YOLO model — without verbose (YOLO8 removed verbose arg)
+model = YOLO("yolov8n.pt")   # autodownloads to ~/.cache
 
+
+# ---------------------------------------------------------
+# ANALYSIS LOGIC
+# ---------------------------------------------------------
 cap = cv2.VideoCapture(video_path)
-
 frame_count = 0
 weapons = 0
 blood = 0
@@ -83,21 +93,28 @@ while True:
 
     frame_count += 1
 
+    # Sample every 10th frame
     if frame_count % 10 != 0:
         continue
 
-    # MAIN FIX → remove streaming, remove verbose, run minimal inference
-    results = model.predict(frame, verbose=False)
+    # Run YOLO inference silently
+    results = model(frame, stream=True)
 
     for r in results:
-        if hasattr(r, "boxes") and r.boxes is not None:
-            for obj in r.boxes.cls.tolist():
-                if int(obj) in [43, 44]:  # gun/knife
-                    weapons += 1
+        if r.boxes is None:
+            continue
+        classes = r.boxes.cls.tolist()
+        for cls_id in classes:
+            cls_id = int(cls_id)
+            # COCO: 43 = knife, 44 = gun
+            if cls_id in [43, 44]:
+                weapons += 1
 
-    # Simple blood detection
+    # Simple blood detection using red color mask
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (0, 50, 50), (10, 255, 255))
+    lower = (0, 50, 50)
+    upper = (10, 255, 255)
+    mask = cv2.inRange(hsv, lower, upper)
     red_ratio = mask.sum() / frame.size
 
     if red_ratio > 0.05:
@@ -105,16 +122,17 @@ while True:
 
 cap.release()
 
+# ---------------------------------------------------------
+# RETURN CLEAN JSON ONLY
+# ---------------------------------------------------------
 result = {
     "weapons": weapons,
     "blood": blood,
     "safe": weapons == 0 and blood == 0
 }
 
-# OUTPUT ONLY JSON
+# **PRINT ONLY JSON — ZERO NOISE**
 print(json.dumps(result), flush=True)
-
-
 
 
 
