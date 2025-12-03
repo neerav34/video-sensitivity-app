@@ -26,14 +26,6 @@ exports.uploadVideo = async (req, res) => {
       processingProgress: 0
     });
 
-    // async processing
-    // process.nextTick(() => {
-    //   const io = req.app.get('io');
-    //   if (io) {
-    //     require('../services/videoProcessing').processVideoPipeline(video._id, io);
-    //   }
-    // });
-
     const io = req.app.get('io');
     if (io) {
     setTimeout(() => {
