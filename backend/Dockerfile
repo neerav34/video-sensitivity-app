@@ -46,6 +46,7 @@ ENV PATH="/app/venv/bin:$PATH"
 ENV YOLOR_CUDA=0
 ENV YOLO_CPU=True
 ENV FORCE_CUDA="0"
+ENV PIP_EXTRA_INDEX_URL="https://download.pytorch.org/whl/cpu"
 
 RUN pip3 install --upgrade pip --break-system-packages
 RUN pip3 install --no-cache-dir -r ml/requirements.txt --break-system-packages
