@@ -112,8 +112,11 @@ while True:
 
     # Simple blood detection using red color mask
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    lower = (0, 50, 50)
-    upper = (10, 255, 255)
+    # lower = (0, 50, 50)
+    # upper = (10, 255, 255)
+    lower = (0, 150, 150)
+    upper = (5, 255, 255)
+
     mask = cv2.inRange(hsv, lower, upper)
     red_ratio = mask.sum() / frame.size
 
