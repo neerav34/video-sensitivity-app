@@ -77,42 +77,50 @@ exports.processVideoPipeline = async (videoId, io) => {
     // Run Python script: ml/scene_detect.py <video-file-path>
     const python = spawn("python3", ["ml/scene_detect.py", video.filePath]);
 
-    // Process Python output
-    python.stdout.on("data", async (data) => {
-      const text = data.toString();
 
-      // Extract ONLY the JSON part
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.log("Python non-JSON output → ignored:", text);
+// Buffer to accumulate stdout until valid JSON appears
+    let buffer = "";
+    
+    python.stdout.on("data", async (data) => {
+      buffer += data.toString();
+    
+      // Try to extract a full JSON object from buffer
+      const match = buffer.match(/\{[^}]+\}/);
+    
+      if (!match) {
+        console.log("Non-JSON output ignored:", data.toString());
         return;
       }
-
+    
       let analysis;
       try {
-        analysis = JSON.parse(jsonMatch[0]);
+        analysis = JSON.parse(match[0]);   // parse only JSON
       } catch (err) {
-        console.error("JSON parse failed:", err, "raw:", text);
-        return;
+        console.log("JSON parse error, waiting for more data...");
+        return; // wait for more chunks
       }
-
+    
+      // Once parsed, clear buffer so duplicate JSON doesn't re-trigger
+      buffer = "";
+    
       const isFlagged = !analysis.safe;
-
+    
       // Mid-progress update
       video.processingProgress = 80;
       await video.save();
       emitProgress(io, videoId, 80, "analyzing", analysis);
-
-      // Final database update
+    
+      // Final DB update
       video.status = "processed";
       video.processingProgress = 100;
       video.sensitivityStatus = isFlagged ? "flagged" : "safe";
       video.analysisDetails = analysis;
       await video.save();
-
+    
       emitProgress(io, videoId, 100, "completed", analysis);
     });
 
+    
     python.stderr.on("data", (data) => {
       console.error("Python error:", data.toString());
     });
