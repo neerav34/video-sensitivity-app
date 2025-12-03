@@ -38,7 +38,9 @@ const VideoSchema = new mongoose.Schema(
     size: Number,
 
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    // tenantId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    tenantId: { type: String, required: true },
+
 
     status: {
       type: String,
