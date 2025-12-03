@@ -12,12 +12,7 @@ const connectDB = require('./src/config/db');
 const app = express();
 const server = http.createServer(app);
 
-// const io = new Server(server, {
-//   cors: {
-//     origin: process.env.CLIENT_URL,
-//     credentials: true
-//   }
-// });
+
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL.split(','),
@@ -28,19 +23,18 @@ const io = new Server(server, {
 
 app.set('io', io);
 
-// middleware
+
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 
-// static for uploaded files if needed
+
 app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_DIR || 'uploads')));
 
-// connect DB
+
 connectDB();
 
-// routes
 const authRoutes = require('./src/routes/auth.routes');
 const videoRoutes = require('./src/routes/video.routes');
 
