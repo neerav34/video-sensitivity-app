@@ -57,26 +57,23 @@ import json
 import warnings
 
 # ---------------------------------------------------------
-# SILENCE ALL YOLO / ULTRALYTICS / NUMPY NOISE
+# SILENCE ALL YOLO / ULTRALYTICS / TQDM / NUMPY NOISE
 # ---------------------------------------------------------
 warnings.filterwarnings("ignore")
 
 os.environ["YOLO_VERBOSE"] = "False"
 os.environ["ULTRALYTICS_SUPPRESS"] = "True"
 os.environ["ULTRALYTICS_CFG"] = "False"
+os.environ["ULTRALYTICS_LOGGING"] = "False"   # <-- REQUIRED
 os.environ["KMP_WARNINGS"] = "0"
 os.environ["NUMEXPR_MAX_THREADS"] = "8"
 
-# ---------------------------------------------------------
-# Import YOLO silently
-# ---------------------------------------------------------
 from ultralytics import YOLO
 
 video_path = sys.argv[1]
 
-# Load YOLO model — without verbose (YOLO8 removed verbose arg)
-model = YOLO("yolov8n.pt")   # autodownloads to ~/.cache
-
+# Load YOLO model (no verbose allowed in new versions)
+model = YOLO("yolov8n.pt")
 
 # ---------------------------------------------------------
 # ANALYSIS LOGIC
@@ -92,12 +89,10 @@ while True:
         break
 
     frame_count += 1
-
-    # Sample every 10th frame
     if frame_count % 10 != 0:
         continue
 
-    # Run YOLO inference silently
+    # YOLO inference silently
     results = model(frame, stream=True)
 
     for r in results:
@@ -105,18 +100,13 @@ while True:
             continue
         classes = r.boxes.cls.tolist()
         for cls_id in classes:
-            cls_id = int(cls_id)
-            # COCO: 43 = knife, 44 = gun
-            if cls_id in [43, 44]:
+            if int(cls_id) in [43, 44]:  # knife/gun in COCO
                 weapons += 1
 
-    # Simple blood detection using red color mask
+    # Blood detection (simple red mask)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    # lower = (0, 50, 50)
-    # upper = (10, 255, 255)
     lower = (0, 150, 150)
     upper = (5, 255, 255)
-
     mask = cv2.inRange(hsv, lower, upper)
     red_ratio = mask.sum() / frame.size
 
@@ -125,18 +115,17 @@ while True:
 
 cap.release()
 
-# ---------------------------------------------------------
-# RETURN CLEAN JSON ONLY
-# ---------------------------------------------------------
 result = {
     "weapons": weapons,
     "blood": blood,
     "safe": weapons == 0 and blood == 0
 }
 
-# **PRINT ONLY JSON — ZERO NOISE**
-print(json.dumps(result), flush=True)
-
+# ---------------------------------------------------------
+# PRINT CLEAN JSON ONLY
+# ---------------------------------------------------------
+sys.stdout.write(json.dumps(result))
+sys.stdout.flush()
 
 
 # import cv2
