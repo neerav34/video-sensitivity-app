@@ -48,6 +48,8 @@
 //   }
 // };
 
+
+
 const { spawn } = require("child_process");
 const Video = require("../models/Video");
 
@@ -66,24 +68,42 @@ exports.processVideoPipeline = async (videoId, io) => {
     const video = await Video.findById(videoId);
     if (!video) return;
 
-    // Set initial state
+    // Initial update
     video.status = "processing";
     video.processingProgress = 10;
     await video.save();
     emitProgress(io, videoId, 10, "processing");
 
-    // Run Python analysis script
+    // Run Python script: ml/scene_detect.py <video-file-path>
     const python = spawn("python3", ["ml/scene_detect.py", video.filePath]);
 
+    // Process Python output
     python.stdout.on("data", async (data) => {
-      const analysis = JSON.parse(data.toString());
+      const text = data.toString();
+
+      // Extract ONLY the JSON part
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log("Python non-JSON output → ignored:", text);
+        return;
+      }
+
+      let analysis;
+      try {
+        analysis = JSON.parse(jsonMatch[0]);
+      } catch (err) {
+        console.error("JSON parse failed:", err, "raw:", text);
+        return;
+      }
+
       const isFlagged = !analysis.safe;
 
+      // Mid-progress update
       video.processingProgress = 80;
       await video.save();
       emitProgress(io, videoId, 80, "analyzing", analysis);
 
-      // Store final result
+      // Final database update
       video.status = "processed";
       video.processingProgress = 100;
       video.sensitivityStatus = isFlagged ? "flagged" : "safe";
@@ -97,17 +117,98 @@ exports.processVideoPipeline = async (videoId, io) => {
       console.error("Python error:", data.toString());
     });
 
-    python.on("close", async () => {
-      console.log("Analysis complete for:", videoId);
+    python.on("close", async (code) => {
+      console.log(`Python process closed (${videoId}) exit code:`, code);
     });
 
   } catch (err) {
     console.error("Video processing error:", err);
+
     await Video.findByIdAndUpdate(videoId, {
       status: "failed",
       processingProgress: 0,
-      sensitivityStatus: "unknown"
+      sensitivityStatus: "unknown",
     });
+
     emitProgress(io, videoId, 0, "failed");
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// const { spawn } = require("child_process");
+// const Video = require("../models/Video");
+
+// function emitProgress(io, videoId, progress, status, details) {
+//   io.to(videoId.toString()).emit("processingUpdate", {
+//     videoId,
+//     progress,
+//     status,
+//     sensitivityStatus: details?.safe === false ? "flagged" : "safe",
+//     details,
+//   });
+// }
+
+// exports.processVideoPipeline = async (videoId, io) => {
+//   try {
+//     const video = await Video.findById(videoId);
+//     if (!video) return;
+
+//     // Set initial state
+//     video.status = "processing";
+//     video.processingProgress = 10;
+//     await video.save();
+//     emitProgress(io, videoId, 10, "processing");
+
+//     // Run Python analysis script
+//     const python = spawn("python3", ["ml/scene_detect.py", video.filePath]);
+
+
+    
+//     python.stdout.on("data", async (data) => {
+//       const analysis = JSON.parse(data.toString());
+//       const isFlagged = !analysis.safe;
+
+//       video.processingProgress = 80;
+//       await video.save();
+//       emitProgress(io, videoId, 80, "analyzing", analysis);
+
+//       // Store final result
+//       video.status = "processed";
+//       video.processingProgress = 100;
+//       video.sensitivityStatus = isFlagged ? "flagged" : "safe";
+//       video.analysisDetails = analysis;
+//       await video.save();
+
+//       emitProgress(io, videoId, 100, "completed", analysis);
+//     });
+
+//     python.stderr.on("data", (data) => {
+//       console.error("Python error:", data.toString());
+//     });
+
+//     python.on("close", async () => {
+//       console.log("Analysis complete for:", videoId);
+//     });
+
+//   } catch (err) {
+//     console.error("Video processing error:", err);
+//     await Video.findByIdAndUpdate(videoId, {
+//       status: "failed",
+//       processingProgress: 0,
+//       sensitivityStatus: "unknown"
+//     });
+//     emitProgress(io, videoId, 0, "failed");
+//   }
+// };
