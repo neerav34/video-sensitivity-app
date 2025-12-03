@@ -1,3 +1,10 @@
+import os
+import warnings
+warnings.filterwarnings("ignore")
+os.environ["YOLO_VERBOSE"] = "False"
+os.environ["ULTRALYTICS_SUPPRESS"] = "True"
+
+
 import cv2
 import sys
 import json
@@ -45,4 +52,6 @@ result = {
     "safe": flag_weapons == 0 and flag_blood == 0
 }
 
-print(json.dumps(result))
+# print(json.dumps(result))
+print(json.dumps(result), flush=True)
+
