@@ -56,18 +56,18 @@ import json
 import os
 import warnings
 
-# Fully disable all YOLO + Ultralytics warnings/logs
-warnings.filterwarnings("ignore")
-os.environ["ULTRALYTICS_IGNORE_DEBUG"] = "1"
+# Disable all YOLO + Ultralytics logs
+os.environ["ULTRALYTICS_LOGGING"] = "False"
+os.environ["ULTRALYTICS_QUIET"] = "True"
 os.environ["YOLO_VERBOSE"] = "0"
 os.environ["WANDB_SILENT"] = "true"
-os.environ["MLFLOW_SILENT"] = "true"
+warnings.filterwarnings("ignore")
 
 from ultralytics import YOLO
 
 video_path = sys.argv[1]
 
-# Load model (no verbose argument!)
+# Load model safely (NO verbose, NO streaming)
 model = YOLO("yolov8n.pt")
 
 cap = cv2.VideoCapture(video_path)
@@ -83,42 +83,36 @@ while True:
 
     frame_count += 1
 
-    # sample every 10th frame
     if frame_count % 10 != 0:
         continue
 
-    # Run inference without extra logs
-    results = model(frame, stream=True)
+    # MAIN FIX → remove streaming, remove verbose, run minimal inference
+    results = model.predict(frame, verbose=False)
 
     for r in results:
         if hasattr(r, "boxes") and r.boxes is not None:
-            classes = r.boxes.cls.tolist()
-            for cls_id in classes:
-                cls_id = int(cls_id)
-                if cls_id in [43, 44]:  # knife, gun
+            for obj in r.boxes.cls.tolist():
+                if int(obj) in [43, 44]:  # gun/knife
                     weapons += 1
 
-    # Blood (red color) detection
+    # Simple blood detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    lower = (0, 50, 50)
-    upper = (10, 255, 255)
-    mask = cv2.inRange(hsv, lower, upper)
-
+    mask = cv2.inRange(hsv, (0, 50, 50), (10, 255, 255))
     red_ratio = mask.sum() / frame.size
+
     if red_ratio > 0.05:
         blood += 1
 
 cap.release()
 
-# FINAL JSON OUTPUT ONLY
 result = {
     "weapons": weapons,
     "blood": blood,
     "safe": weapons == 0 and blood == 0
 }
 
+# OUTPUT ONLY JSON
 print(json.dumps(result), flush=True)
-
 
 
 
