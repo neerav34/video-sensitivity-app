@@ -247,12 +247,6 @@ npm run test
 
 ---
 
-## 📜 **License**
-
-This project is licensed under the **MIT License**.
-
----
-
 ## 📬 **Contact**
 
 For support or suggestions, create a GitHub issue or email:
